@@ -36,7 +36,6 @@ func verifyUser(c *gin.Context) {
 		}
 	}
 	logrus.Infof("unauthorized visitor")
-	c.Set(Key.UserID, nil)
 }
 
 // RegisterToken will add and random token and userId in userTokenMap, and return the token,
