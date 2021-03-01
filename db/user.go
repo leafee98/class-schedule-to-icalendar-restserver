@@ -18,9 +18,6 @@ func CreateUser(username string, password string, email string, nickname string)
 	var hashPassArr [32]byte = passwordHash(password)
 	res, err := DB.Exec("insert into t_user (c_username, c_password, c_email, c_nickname) values (?, ?, ?, ?)",
 		username, hashPassArr[:], email, nickname)
-	if err != nil {
-		return 0, err
-	}
 	return res.LastInsertId()
 }
 

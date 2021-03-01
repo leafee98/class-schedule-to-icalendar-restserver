@@ -5,6 +5,7 @@ import (
 
 	"github.com/leafee98/class-schedule-to-icalendar-restserver/config"
 	"github.com/leafee98/class-schedule-to-icalendar-restserver/db"
+	"github.com/leafee98/class-schedule-to-icalendar-restserver/middlewares"
 	"github.com/leafee98/class-schedule-to-icalendar-restserver/routers"
 	"github.com/leafee98/class-schedule-to-icalendar-restserver/rpc"
 	"github.com/leafee98/class-schedule-to-icalendar-restserver/server"
@@ -39,6 +40,7 @@ func main() {
 
 	// keep this initialize order!
 	server.Init()
+	middlewares.Init(server.Engine)
 	routers.Init(server.Engine)
 	server.Run()
 }

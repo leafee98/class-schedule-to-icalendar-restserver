@@ -3,19 +3,40 @@ package middlewares
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
-var userTokenMap map[string]int64 = make(map[string]int64)
+// KeyStruct is the struct used for keys setted in gin.Context
+type KeyStruct struct {
+	UserID string
+}
 
-func verifyUser() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		v, err := c.Cookie("token")
-		if err == nil {
-			c.Set("userId", userTokenMap[v])
-		} else {
-			c.Set("userId", nil)
+// Key stored the key values setted in gin.Context
+var Key KeyStruct
+
+func init() {
+	Key = KeyStruct{
+		UserID: "userID",
+	}
+	userTokenMap = make(map[string]int64)
+
+	registerMiddleware(verifyUser)
+}
+
+var userTokenMap map[string]int64
+
+func verifyUser(c *gin.Context) {
+	v, err := c.Cookie("token")
+	if err == nil {
+		userID, exists := userTokenMap[v]
+		if exists {
+			c.Set(Key.UserID, userID)
+			logrus.Infof("userID=%v verified", userID)
+			return
 		}
 	}
+	logrus.Infof("unauthorized visitor")
+	c.Set(Key.UserID, nil)
 }
 
 // RegisterToken will add and random token and userId in userTokenMap, and return the token,

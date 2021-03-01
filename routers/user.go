@@ -16,6 +16,8 @@ import (
 func init() {
 	RegisterRouter("/register", "post", register)
 	RegisterRouter("/login", "post", login)
+	RegisterRouter("/logout", "post", logout)
+	RegisterRouter("/logout", "get", logout)
 }
 
 func register(c *gin.Context) {
@@ -42,4 +44,13 @@ func login(c *gin.Context) {
 		c.SetCookie("token", token, 3600*24*7, "/", "", true, false)
 		c.JSON(http.StatusOK, dto.NewResponseFine(dto.UserLoginRes{ID: id}))
 	}
+}
+
+func logout(c *gin.Context) {
+	token, err := c.Cookie("token")
+	c.SetCookie("token", "000", -1, "/", "", true, false)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("unauthorized logout is forbidden"))
+	}
+	middlewares.ExpireToken(token)
 }
