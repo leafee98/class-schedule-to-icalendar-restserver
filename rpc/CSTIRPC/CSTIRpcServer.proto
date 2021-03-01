@@ -1,0 +1,27 @@
+
+syntax = "proto3";
+
+option go_package = "github.com/leafee98/class-schedule-to-icalendar-restserver/rpc/CSTIRPC";
+option java_multiple_files = true;
+option java_package = "com.github.leafee98.CSTI.rpcserver.rpc";
+option java_outer_classname = "CSTIRpcServerProto";
+
+package rpcserver;
+
+service CSTIRpcServer {
+  // generate ical with json configure
+  rpc jsonGenerate(ConfJson) returns (ResultIcal) {}
+  rpc tomlGenerate(ConfToml) returns (ResultIcal) {}
+}
+
+message ConfJson {
+  string content = 1;
+}
+
+message ConfToml {
+  string content = 1;
+}
+
+message ResultIcal {
+  string content = 2;
+}
