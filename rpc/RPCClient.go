@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/leafee98/class-schedule-to-icalendar-restserver/config"
 	"github.com/leafee98/class-schedule-to-icalendar-restserver/rpc/CSTIRPC"
@@ -17,8 +18,9 @@ func JSONGenerate(content string) (string, error) {
 }
 
 // Init initialize RPCClient object to use rpc of rpcserver
+// try to connect to rpc server in 5 seconds
 func Init() error {
-	conn, err := grpc.Dial(config.RPCTarget, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(config.RPCTarget, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(5*time.Second))
 	if err != nil {
 		return err
 	}
