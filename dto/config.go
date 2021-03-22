@@ -56,3 +56,17 @@ type ConfigGetRes struct {
 	CreateTime time.Time `db:"c_create_time" json:"createTime" binding:"required"`
 	ModifyTime time.Time `db:"c_modify_time" json:"modifyTime" binding:"required"`
 }
+
+// ConfigModifyReq is used to modify a config.
+// Owner should not change the property Type.
+type ConfigModifyReq struct {
+	ID      int64  `db:"c_id" json:"id" binding:"required"`
+	Name    string `db:"c_name" json:"name" binding:"required"`
+	Content string `db:"c_content" json:"content" binding:"required"`
+	Format  int8   `db:"c_format" json:"format" binding:"required"`
+	Remark  string `db:"c_remark" json:"remark" binding:"required"`
+}
+
+// return status, succeed is "ok"
+// Should be the same as Response.Status
+type ConfigModifyRes string

@@ -13,6 +13,7 @@ import (
 func init() {
 	RegisterRouter("/config-create", "post", configCreate)
 	RegisterRouter("/config-get-by-id", "post", configGetByID)
+	RegisterRouter("/config-modify", "post", configModify)
 }
 
 // ConfigCreate will create a new Config
@@ -104,6 +105,67 @@ func configGetByID(c *gin.Context) {
 // check the config deleted status, err msg: "config not exists"
 func configGetConfigByShare(c *gin.Context) {
 
+}
+
+// change config content
+// property Type is not changable
+//
+// check login status, err msg: "unauthorized action is forbidden"
+// check the deleted status, or no rows got, err msg: "config not exists"
+// check the ownership, err msg: "you are not the owner of the config"
+// update c_modify_time
+func configModify(c *gin.Context) {
+	// bind request
+	var req dto.ConfigModifyReq
+	if bindOrResponseFailed(c, &req) != nil {
+		return
+	}
+
+	// check login status
+	userID, err := getUserIDOrAbort(c)
+	if err != nil {
+		return
+	}
+
+	// get the config detail
+	var deleted bool
+	var ownerID int64
+	row := db.DB.QueryRow("select c_deleted, c_owner_id from t_config where c_id = ?", req.ID)
+	err = row.Scan(&deleted, &ownerID)
+
+	if err != sql.ErrNoRows && err != nil {
+		// unknown error
+		logrus.Error(err.Error())
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	} else if err == sql.ErrNoRows || deleted {
+		// no such config or deleted
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("config not exists"))
+		return
+	} else if err == nil {
+		// check ownership
+		if userID != ownerID {
+			c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("you are not the owner of the config"))
+			return
+		}
+	}
+
+	// update the config
+	res, err := db.DB.Exec("update t_config"+
+		" set c_modify_time=now(), c_name=?, c_content=?, c_format=?, c_remark=?"+
+		" where c_id = ?",
+		req.Name, req.Content, req.Format, req.Remark, req.ID)
+	if err != nil {
+		logrus.Error(err.Error())
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+	} else {
+		affected, _ := res.RowsAffected()
+		if affected > 0 {
+			c.JSON(http.StatusOK, dto.NewResponseFine(dto.ConfigModifyRes("ok")))
+		} else {
+			c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad(dto.ConfigModifyRes("bad")))
+		}
+	}
 }
 
 // get config's name, remark, create time and modify time owned by user.
