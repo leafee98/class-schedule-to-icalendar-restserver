@@ -152,7 +152,7 @@ func configModify(c *gin.Context) {
 
 	// update the config
 	res, err := db.DB.Exec("update t_config"+
-		" set c_modify_time=now(), c_name=?, c_content=?, c_format=?, c_remark=?"+
+		" set c_name=?, c_content=?, c_format=?, c_remark=?"+
 		" where c_id = ?",
 		req.Name, req.Content, req.Format, req.Remark, req.ID)
 	if err != nil {
