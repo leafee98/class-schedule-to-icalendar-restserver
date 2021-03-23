@@ -22,13 +22,13 @@ func init() {
 // Check the type and format is in range of rule, err: "invalid type or format"
 func configCreate(c *gin.Context) {
 	var req dto.ConfigCreateReq
-	if bindOrResponseFailed(c, &req) != nil {
+	if bindOrAbort(c, &req) != nil {
 		return
 	}
 
 	// if the user is authorzied
-	ownerID, err := getUserIDOrAbort(c)
-	if err != nil {
+	var ownerID int64
+	if getUserIDOrAbort(c, &ownerID) != nil {
 		return
 	}
 
@@ -59,13 +59,13 @@ func configCreate(c *gin.Context) {
 func configGetByID(c *gin.Context) {
 	// bind request
 	var req dto.ConfigGetByIDReq
-	if bindOrResponseFailed(c, &req) != nil {
+	if bindOrAbort(c, &req) != nil {
 		return
 	}
 
 	// check login status
-	userID, err := getUserIDOrAbort(c)
-	if err != nil {
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
 		return
 	}
 
@@ -77,7 +77,7 @@ func configGetByID(c *gin.Context) {
 		"select c_id, c_type, c_name, c_content, c_format,"+
 			"c_remark, c_create_time, c_modify_time,"+
 			"c_deleted, c_owner_id from t_config where c_id = ?", req.ID)
-	err = row.Scan(&res.ID, &res.Type, &res.Name, &res.Content, &res.Format,
+	err := row.Scan(&res.ID, &res.Type, &res.Name, &res.Content, &res.Format,
 		&res.Remark, &res.CreateTime, &res.ModifyTime,
 		&deleted, &ownerID)
 
@@ -117,13 +117,13 @@ func configGetConfigByShare(c *gin.Context) {
 func configModify(c *gin.Context) {
 	// bind request
 	var req dto.ConfigModifyReq
-	if bindOrResponseFailed(c, &req) != nil {
+	if bindOrAbort(c, &req) != nil {
 		return
 	}
 
 	// check login status
-	userID, err := getUserIDOrAbort(c)
-	if err != nil {
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
 		return
 	}
 
@@ -131,7 +131,7 @@ func configModify(c *gin.Context) {
 	var deleted bool
 	var ownerID int64
 	row := db.DB.QueryRow("select c_deleted, c_owner_id from t_config where c_id = ?", req.ID)
-	err = row.Scan(&deleted, &ownerID)
+	err := row.Scan(&deleted, &ownerID)
 
 	if err != sql.ErrNoRows && err != nil {
 		// unknown error

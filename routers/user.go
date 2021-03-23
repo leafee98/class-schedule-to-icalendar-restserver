@@ -24,7 +24,7 @@ func init() {
 
 func register(c *gin.Context) {
 	var req dto.UserRegisterReq
-	if bindOrResponseFailed(c, &req) != nil {
+	if bindOrAbort(c, &req) != nil {
 		return
 	}
 
@@ -65,7 +65,7 @@ func register(c *gin.Context) {
 
 func login(c *gin.Context) {
 	var req dto.UserLoginReq
-	if bindOrResponseFailed(c, &req) != nil {
+	if bindOrAbort(c, &req) != nil {
 		return
 	}
 

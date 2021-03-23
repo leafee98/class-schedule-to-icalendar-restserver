@@ -9,15 +9,15 @@ import (
 	"github.com/leafee98/class-schedule-to-icalendar-restserver/middlewares"
 )
 
-func getUserIDOrAbort(c *gin.Context) (int64, error) {
+func getUserIDOrAbort(c *gin.Context, userID *int64) error {
 	idInterface, exist := c.Get(middlewares.Key.UserID)
 	if exist == false {
 		c.AbortWithStatusJSON(http.StatusForbidden,
 			dto.NewResponseBad("unauthorized action is forbidden"))
-		return 0, errors.New("unanthorized")
+		return errors.New("unanthorized")
 	}
-	id := idInterface.(int64)
-	return id, nil
+	*userID = idInterface.(int64)
+	return nil
 }
 
 func checkConfigTypeRange(t int8) bool {
@@ -28,7 +28,7 @@ func checkConfigFormatRange(r int8) bool {
 	return r <= dto.LimitConfigFormatMax && r >= dto.LimitConfigFormatMin
 }
 
-func bindOrResponseFailed(c *gin.Context, req interface{}) error {
+func bindOrAbort(c *gin.Context, req interface{}) error {
 	err := c.Bind(req)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("invalid request parameters"))
