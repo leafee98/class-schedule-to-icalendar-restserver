@@ -43,11 +43,12 @@ func configCreate(c *gin.Context) {
 		"insert into t_config (c_type, c_name, c_content, c_format, c_owner_id, c_remark)"+
 			" values (?, ?, ?, ?, ?, ?)",
 		req.Type, req.Name, req.Content, req.Format, ownerID, req.Remark)
-	configID, err := res.LastInsertId()
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, dto.NewResponseBad(err.Error()))
 		return
 	}
+
+	configID, _ := res.LastInsertId()
 	c.JSON(http.StatusOK, dto.NewResponseFine(dto.ConfigCreateRes{ID: configID}))
 }
 
