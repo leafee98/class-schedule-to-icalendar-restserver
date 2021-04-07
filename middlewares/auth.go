@@ -2,11 +2,10 @@ package middlewares
 
 import (
 	"database/sql"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/leafee98/class-schedule-to-icalendar-restserver/db"
+	"github.com/leafee98/class-schedule-to-icalendar-restserver/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -53,18 +52,7 @@ func verifyUser(c *gin.Context) {
 //
 // Register new token will remove the older token.
 func RegisterToken(userID int64, duration int) string {
-	u, _ := uuid.NewRandom()
-	var uuid string = u.String()
-
-	// remove dashes in token
-	var builder strings.Builder
-	builder.Grow(len(uuid))
-	for _, c := range uuid {
-		if c != '-' {
-			builder.WriteRune(c)
-		}
-	}
-	token := builder.String()
+	token := utils.GenerateToken()
 
 	// remove the older token
 	_, err := db.DB.Exec("delete from t_login_token where c_user_id = ?", userID)

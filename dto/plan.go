@@ -30,3 +30,12 @@ type PlanRemoveConfigReq struct {
 }
 
 type PlanRemoveConfigRes string
+
+type PlanCreateTokenReq struct {
+	ID int64 `json:"id" binding:"required"`
+}
+
+type PlanCreateTokenRes struct {
+	ID    int64  `json:"id" binding:"required"`
+	Token string `json:"token" binding:"required"`
+}
