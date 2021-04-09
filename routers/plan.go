@@ -108,7 +108,7 @@ func planCreateToken(c *gin.Context) {
 	}
 
 	// existence and ownership
-	if planOwnerShipOrAbort(c, userID, req.ID) != nil {
+	if planOwnerShipOrAbort(c, req.ID, userID) != nil {
 		return
 	}
 
