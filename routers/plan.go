@@ -73,7 +73,7 @@ func planAddConfig(c *gin.Context) {
 	// check relation exist
 	err3 := relationExist(req.PlanID, req.ConfigID)
 	if err3 == nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad(err3.Error()))
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("this config already added to the plan"))
 		return
 	}
 
