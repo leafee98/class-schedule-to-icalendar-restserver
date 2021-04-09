@@ -15,7 +15,7 @@ var HTTPBasepath string
 // LoadConfig function load config from file whose path is confPath
 // todo: load from file instead of using the predefine value
 func LoadConfig(confPath string) error {
-	RestEndpoint = "127.0.0.1:8048"
+	RestEndpoint = "0.0.0.0:8048"
 	RPCTarget = "127.0.0.1:8047"
 	DatabaseSource = "u_csti:csti_pass@tcp(127.0.0.1:3306)/csti"
 	HTTPBasepath = "/api"
