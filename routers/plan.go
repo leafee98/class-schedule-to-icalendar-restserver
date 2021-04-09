@@ -15,6 +15,7 @@ import (
 func init() {
 	RegisterRouter("plan-create", "post", planCreate)
 	RegisterRouter("plan-add-config", "post", planAddConfig)
+	RegisterRouter("plan-remove-config", "post", planRemoveConfig)
 	RegisterRouter("plan-create-token", "post", planCreateToken)
 }
 
@@ -91,7 +92,47 @@ func planAddConfig(c *gin.Context) {
 }
 
 func planRemoveConfig(c *gin.Context) {
+	// bind request
+	var req dto.PlanRemoveConfigReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
 
+	// check login status
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// check ownership
+	if planOwnerShipOrAbort(c, req.PlanID, userID) != nil {
+		return
+	}
+	if configOwnershipOrAbort(c, req.ConfigID, userID) != nil {
+		return
+	}
+
+	// check relation exist
+	err3 := relationExist(req.PlanID, req.ConfigID)
+	if err3 != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("this config haven't been added to the plan"))
+		return
+	}
+
+	// remove the relation
+	const sqlCommand string = `delete from t_plan_config_relation where c_plan_id = ? and c_config_id = ?;`
+	res, err := db.DB.Exec(sqlCommand, req.PlanID, req.ConfigID)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+
+	if affected, _ := res.RowsAffected(); affected > 0 {
+		c.JSON(http.StatusOK, dto.NewResponseFine("ok"))
+	} else {
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad("no relation deleted"))
+	}
 }
 
 // check delete status
