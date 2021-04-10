@@ -258,7 +258,7 @@ func configOwnership(configID int64, userID int64) error {
 func configOwnershipOrAbort(c *gin.Context, configID int64, userID int64) error {
 	err := configOwnership(configID, userID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, err.Error())
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad(err.Error()))
 	}
 	return err
 }
