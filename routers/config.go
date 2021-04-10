@@ -14,6 +14,7 @@ func init() {
 	RegisterRouter("/config-create", "post", configCreate)
 	RegisterRouter("/config-get-by-id", "post", configGetByID)
 	RegisterRouter("/config-modify", "post", configModify)
+	RegisterRouter("/config-remove", "post", configRemove)
 }
 
 // ConfigCreate will create a new Config
@@ -166,6 +167,41 @@ func configModify(c *gin.Context) {
 		} else {
 			c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad(dto.ConfigModifyRes("bad")))
 		}
+	}
+}
+
+// remove the config (set the deleted flag to true)
+// check login
+// check exists
+// check ownership
+func configRemove(c *gin.Context) {
+	var req dto.ConfigRemoveReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// check existence and ownership
+	if configOwnershipOrAbort(c, req.ID, userID) != nil {
+		return
+	}
+
+	const sqlCommand string = "update t_config set c_deleted = true where c_id = ?;"
+	res, err := db.DB.Exec(sqlCommand, req.ID)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+
+	if affected, _ := res.RowsAffected(); affected > 0 {
+		c.JSON(http.StatusOK, dto.NewResponseFine(dto.ConfigRemoveRes("ok")))
+	} else {
+		c.JSON(http.StatusBadGateway, dto.NewResponseFine(dto.ConfigRemoveRes("bad")))
 	}
 }
 

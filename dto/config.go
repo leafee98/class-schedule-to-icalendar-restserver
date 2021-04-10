@@ -70,3 +70,12 @@ type ConfigModifyReq struct {
 // return status, succeed is "ok"
 // Should be the same as Response.Status
 type ConfigModifyRes string
+
+// ConfigRemoveReq is used to remove config
+type ConfigRemoveReq struct {
+	ID int64 `db:"c_id" json:"id" binding:"required"`
+}
+
+// return status, succeed is "ok"
+// Should be the same as Response.Status
+type ConfigRemoveRes string
