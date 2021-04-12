@@ -79,3 +79,21 @@ type ConfigRemoveReq struct {
 // return status, succeed is "ok"
 // Should be the same as Response.Status
 type ConfigRemoveRes string
+
+// ConfigGetListReq is used to get a list of user's config
+type ConfigGetListReq struct {
+	// available value: "createTime", "modifyTime", "name", "id"
+	SortBy string `json:"sortBy" binding:"required"`
+
+	// will make response's Count to zero when Offset is bigger than the number of config belongs to user
+	Offset int64 `json:"offset"`
+
+	// max 30
+	Count int64 `json:"count" binding:"required"`
+}
+
+// ConfigGetListRes respond to ConfigGetListReq
+type ConfigGetListRes struct {
+	Count   int64           `json:"count" binding:"required"`
+	Configs []ConfigSummary `json:"configs" binding:"required"`
+}

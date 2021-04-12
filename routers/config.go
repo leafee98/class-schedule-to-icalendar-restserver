@@ -2,6 +2,7 @@ package routers
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,7 @@ func init() {
 	RegisterRouter("/config-get-by-id", "post", configGetByID)
 	RegisterRouter("/config-modify", "post", configModify)
 	RegisterRouter("/config-remove", "post", configRemove)
+	RegisterRouter("/config-get-list", "post", configGetList)
 }
 
 // ConfigCreate will create a new Config
@@ -206,7 +208,61 @@ func configRemove(c *gin.Context) {
 }
 
 // get config's name, remark, create time and modify time owned by user.
-// from 'start' to 'start + limit', 'limit' no more than 30
-func configList(c *gin.Context) {
+// result will be from 'offset', 'count' no more than 30
+func configGetList(c *gin.Context) {
+	var req dto.ConfigGetListReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
 
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// count no more than 30
+	if req.Count > 30 {
+		req.Count = 30
+	}
+
+	switch req.SortBy {
+	case "createTime":
+		req.SortBy = "c_create_time"
+	case "modifyTime":
+		req.SortBy = "c_modify_time"
+	case "name":
+		req.SortBy = "c_name"
+	case "id":
+		req.SortBy = "c_id"
+	default:
+		req.SortBy = "c_id"
+	}
+
+	const sqlCommandPre = "select c_id, c_type, c_name, c_format, c_remark, c_create_time, c_modify_time from t_config" +
+		" where c_owner_id = ? and c_deleted = false order by %s limit ?, ?;"
+	var sqlCommand string = fmt.Sprintf(sqlCommandPre, req.SortBy)
+	rows, err := db.DB.Query(sqlCommand, userID, req.Offset, req.Count)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error))
+		return
+	}
+
+	var configSummarys []dto.ConfigSummary = make([]dto.ConfigSummary, 0)
+	for rows.Next() {
+		var configSummary dto.ConfigSummary
+		rows.Scan(&configSummary.ID,
+			&configSummary.Type,
+			&configSummary.Name,
+			&configSummary.Format,
+			&configSummary.Remark,
+			&configSummary.CreateTime,
+			&configSummary.ModifyTime)
+
+		configSummarys = append(configSummarys, configSummary)
+	}
+	rows.Close()
+
+	c.JSON(http.StatusOK,
+		dto.NewResponseFine(dto.ConfigGetListRes{Count: int64(len(configSummarys)), Configs: configSummarys}))
 }
