@@ -29,7 +29,7 @@ func checkConfigFormatRange(r int8) bool {
 }
 
 func bindOrAbort(c *gin.Context, req interface{}) error {
-	err := c.Bind(req)
+	err := c.ShouldBind(req)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("invalid request parameters"))
 	}
