@@ -45,3 +45,14 @@ type PlanRevokeTokenReq struct {
 }
 
 type PlanRevokeTokenRes string
+
+// PlanGetTokenListReq is used to get all tokens of a plan
+type PlanGetTokenListReq struct {
+	ID int64 `db:"c_id" json:"id" binding:"required"`
+}
+
+// PlanGetTokenListRes is used to respond ConfigGetTokenListReq
+type PlanGetTokenListRes struct {
+	Tokens []PlanTokenDetail `json:"tokens" binding:"required"`
+	Count  int64             `json:"count" binding:"required"`
+}

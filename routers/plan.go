@@ -18,6 +18,7 @@ func init() {
 	RegisterRouter("plan-remove-config", "post", planRemoveConfig)
 	RegisterRouter("plan-create-token", "post", planCreateToken)
 	RegisterRouter("plan-revoke-token", "post", planRevokeToken)
+	RegisterRouter("plan-get-token-list", "post", planGetTokenList)
 }
 
 // create a plan
@@ -208,6 +209,39 @@ func planRevokeToken(c *gin.Context) {
 	} else {
 		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(dto.PlanRevokeTokenRes("deleted nothing")))
 	}
+}
+
+// check login status
+// check plan existence and ownership
+func planGetTokenList(c *gin.Context) {
+	var req dto.PlanGetTokenListReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	if planOwnerShipOrAbort(c, req.ID, userID) != nil {
+		return
+	}
+
+	rows, err := db.DB.Query("select c_token, c_create_time from t_plan_token where c_plan_id = ?;", req.ID)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+	var tokens []dto.PlanTokenDetail = make([]dto.PlanTokenDetail, 0)
+	var token dto.PlanTokenDetail
+	for rows.Next() {
+		rows.Scan(&token.Token, &token.CreateTime)
+		tokens = append(tokens, token)
+	}
+	rows.Close()
+	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanGetTokenListRes{Count: int64(len(tokens)), Tokens: tokens}))
 }
 
 ///////////////////////////////

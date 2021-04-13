@@ -24,3 +24,8 @@ type ConfigDetail struct {
 	CreateTime time.Time `db:"c_create_time" json:"createTime" binding:"required"`
 	ModifyTime time.Time `db:"c_modify_time" json:"modifyTime" binding:"required"`
 }
+
+type PlanTokenDetail struct {
+	Token      string    `json:"tokens" binding:"required"`
+	CreateTime time.Time `json:"createTime" binding:"required"`
+}
