@@ -36,7 +36,6 @@ type PlanCreateTokenReq struct {
 }
 
 type PlanCreateTokenRes struct {
-	ID    int64  `json:"id" binding:"required"`
 	Token string `json:"token" binding:"required"`
 }
 

@@ -156,14 +156,13 @@ func planCreateToken(c *gin.Context) {
 	}
 
 	token := utils.GenerateToken()
-	res, err := db.DB.Exec("insert into t_plan_token (c_plan_id, c_token) values (?, ?)", req.ID, token)
+	_, err := db.DB.Exec("insert into t_plan_token (c_plan_id, c_token) values (?, ?)", req.ID, token)
 	if err != nil {
 		logrus.Error(err)
 		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
 		return
 	}
-	tokenID, _ := res.LastInsertId()
-	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanCreateTokenRes{ID: tokenID, Token: token}))
+	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanCreateTokenRes{Token: token}))
 }
 
 // check login status
