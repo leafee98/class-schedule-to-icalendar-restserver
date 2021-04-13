@@ -17,6 +17,7 @@ func init() {
 	RegisterRouter("plan-add-config", "post", planAddConfig)
 	RegisterRouter("plan-remove-config", "post", planRemoveConfig)
 	RegisterRouter("plan-create-token", "post", planCreateToken)
+	RegisterRouter("plan-revoke-token", "post", planRevokeToken)
 }
 
 // create a plan
@@ -164,9 +165,49 @@ func planCreateToken(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanCreateTokenRes{ID: tokenID, Token: token}))
 }
 
-// todo
+// check login status
+// check token existence
+// check plan existence and ownership
 func planRevokeToken(c *gin.Context) {
+	var req dto.PlanRevokeTokenReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
 
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// get planID from token
+	var planID int64
+	row := db.DB.QueryRow("select c_plan_id from t_plan_token where c_token = ?;", req.Token)
+	err := row.Scan(&planID)
+	if err == sql.ErrNoRows {
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("no such token"))
+		return
+	} else if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+
+	if planOwnerShipOrAbort(c, planID, userID) != nil {
+		return
+	}
+
+	// delete this token
+	res, err := db.DB.Exec("delete from t_plan_token where c_token = ?;", req.Token)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+	if affected, _ := res.RowsAffected(); affected > 0 {
+		c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanRevokeTokenRes("ok")))
+	} else {
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(dto.PlanRevokeTokenRes("deleted nothing")))
+	}
 }
 
 ///////////////////////////////
