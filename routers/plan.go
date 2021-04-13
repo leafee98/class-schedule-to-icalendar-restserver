@@ -155,8 +155,22 @@ func planCreateToken(c *gin.Context) {
 		return
 	}
 
+	// cannot create token of plan more than 30
+	var tokenCount int64
+	row := db.DB.QueryRow("select count(*) from t_plan_token where c_plan_id = ?;", req.ID)
+	err := row.Scan(&tokenCount)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+	}
+	if tokenCount >= 30 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad(
+			"number of tokens of the same plan cannot be more than 30, revoke some tokens before create more."))
+		return
+	}
+
 	token := utils.GenerateToken()
-	_, err := db.DB.Exec("insert into t_plan_token (c_plan_id, c_token) values (?, ?)", req.ID, token)
+	_, err = db.DB.Exec("insert into t_plan_token (c_plan_id, c_token) values (?, ?)", req.ID, token)
 	if err != nil {
 		logrus.Error(err)
 		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
