@@ -1,5 +1,7 @@
 package dto
 
+import "time"
+
 // Name     string `json:"name" binding:"required"`
 // Remark   string `json:"remark" binding:"required"`
 // ID       int64  `json:"id" binding:"required"`
@@ -30,6 +32,20 @@ type PlanRemoveConfigReq struct {
 }
 
 type PlanRemoveConfigRes string
+
+type PlanGetByIdReq struct {
+	ID int64 `json:"id" binding:"required"`
+}
+
+type PlanGetByIdRes struct {
+	Name       string         `json:"name" binding:"required"`
+	Remark     string         `json:"remark" binding:"required"`
+	ID         int64          `json:"id" binding:"required"`
+	CreateTime time.Time      `json:"createTime" binding:"required"`
+	ModifyTime time.Time      `json:"modifyTime" binding:"required"`
+	Configs    []ConfigDetail `json:"configs" binding:"required"`
+	// todo: config shared and added
+}
 
 type PlanCreateTokenReq struct {
 	ID int64 `json:"id" binding:"required"`

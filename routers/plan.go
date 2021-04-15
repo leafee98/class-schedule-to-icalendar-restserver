@@ -16,6 +16,7 @@ func init() {
 	RegisterRouter("plan-create", "post", planCreate)
 	RegisterRouter("plan-add-config", "post", planAddConfig)
 	RegisterRouter("plan-remove-config", "post", planRemoveConfig)
+	RegisterRouter("plan-get-by-id", "post", planGetById)
 	RegisterRouter("plan-create-token", "post", planCreateToken)
 	RegisterRouter("plan-revoke-token", "post", planRevokeToken)
 	RegisterRouter("plan-get-token-list", "post", planGetTokenList)
@@ -135,6 +136,60 @@ func planRemoveConfig(c *gin.Context) {
 	} else {
 		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad("no relation deleted"))
 	}
+}
+
+// check login status
+// check plan existence and ownership
+func planGetById(c *gin.Context) {
+	var req dto.PlanGetByIdReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	if planOwnerShipOrAbort(c, req.ID, userID) != nil {
+		return
+	}
+
+	var res dto.PlanGetByIdRes
+	res.Configs = make([]dto.ConfigDetail, 0)
+
+	const sqlCommandGetPlan string = "select c_id, c_name, c_remark, c_create_time, c_modify_time from t_plan where c_id = ?;"
+	row := db.DB.QueryRow(sqlCommandGetPlan, req.ID)
+	err := row.Scan(&res.ID, &res.Name, &res.Remark, &res.CreateTime, &res.ModifyTime)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+
+	const sqlCommandGetConfigs = "select " +
+		"c_id, c_type, c_name, c_content, c_format, c_remark, c_create_time, c_modify_time " +
+		"from t_config where c_id in (select c_config_id from t_plan_config_relation where c_plan_id = ?);"
+	rows, err := db.DB.Query(sqlCommandGetConfigs, req.ID)
+	defer rows.Close()
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+
+	for rows.Next() {
+		var co dto.ConfigDetail
+		err = rows.Scan(&co.ID, &co.Type, &co.Name, &co.Content, &co.Format, &co.Remark, &co.CreateTime, &co.ModifyTime)
+		if err != nil {
+			logrus.Error(err)
+			c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+			return
+		}
+		res.Configs = append(res.Configs, co)
+	}
+
+	c.JSON(http.StatusOK, dto.NewResponseFine(res))
 }
 
 // check delete status
