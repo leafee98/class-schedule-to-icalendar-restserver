@@ -17,6 +17,7 @@ func init() {
 	RegisterRouter("plan-add-config", "post", planAddConfig)
 	RegisterRouter("plan-remove-config", "post", planRemoveConfig)
 	RegisterRouter("plan-get-by-id", "post", planGetById)
+	RegisterRouter("plan-remove", "post", planRemove)
 	RegisterRouter("plan-create-token", "post", planCreateToken)
 	RegisterRouter("plan-revoke-token", "post", planRevokeToken)
 	RegisterRouter("plan-get-token-list", "post", planGetTokenList)
@@ -158,7 +159,8 @@ func planGetById(c *gin.Context) {
 	var res dto.PlanGetByIdRes
 	res.Configs = make([]dto.ConfigDetail, 0)
 
-	const sqlCommandGetPlan string = "select c_id, c_name, c_remark, c_create_time, c_modify_time from t_plan where c_id = ?;"
+	const sqlCommandGetPlan string = "select c_id, c_name, c_remark, c_create_time, c_modify_time " +
+		"from t_plan where c_id = ?;"
 	row := db.DB.QueryRow(sqlCommandGetPlan, req.ID)
 	err := row.Scan(&res.ID, &res.Name, &res.Remark, &res.CreateTime, &res.ModifyTime)
 	if err != nil {
@@ -190,6 +192,35 @@ func planGetById(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.NewResponseFine(res))
+}
+
+func planRemove(c *gin.Context) {
+	var req dto.PlanRemoveReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	if planOwnerShipOrAbort(c, req.ID, userID) != nil {
+		return
+	}
+
+	const sqlCommand string = "update t_plan set c_deleted = true where c_id = ?;"
+	res, err := db.DB.Exec(sqlCommand, req.ID)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+	if affected, _ := res.RowsAffected(); affected > 0 {
+		c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanRemoveRes("ok")))
+	} else {
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad("deleted nothing"))
+	}
 }
 
 // check delete status

@@ -47,6 +47,12 @@ type PlanGetByIdRes struct {
 	// todo: config shared and added
 }
 
+type PlanRemoveReq struct {
+	ID int64 `json:"id" binding:"required"`
+}
+
+type PlanRemoveRes string
+
 type PlanCreateTokenReq struct {
 	ID int64 `json:"id" binding:"required"`
 }
