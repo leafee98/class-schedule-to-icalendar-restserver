@@ -3,6 +3,7 @@ package routers
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,7 @@ func init() {
 	RegisterRouter("plan-remove-config", "post", planRemoveConfig)
 	RegisterRouter("plan-get-by-id", "post", planGetById)
 	RegisterRouter("plan-remove", "post", planRemove)
+	RegisterRouter("plan-get-list", "post", planGetList)
 	RegisterRouter("plan-create-token", "post", planCreateToken)
 	RegisterRouter("plan-revoke-token", "post", planRevokeToken)
 	RegisterRouter("plan-get-token-list", "post", planGetTokenList)
@@ -221,6 +223,62 @@ func planRemove(c *gin.Context) {
 	} else {
 		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad("deleted nothing"))
 	}
+}
+
+func planGetList(c *gin.Context) {
+	var req dto.PlanGetListReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// count no more than 30
+	if req.Count > 30 {
+		req.Count = 30
+	}
+
+	switch req.SortBy {
+	case "createTime":
+		req.SortBy = "c_create_time"
+	case "modifyTime":
+		req.SortBy = "c_modify_time"
+	case "name":
+		req.SortBy = "c_name"
+	case "id":
+		req.SortBy = "c_id"
+	default:
+		req.SortBy = "c_id"
+	}
+
+	const sqlCommandPre = "select c_id, c_name, c_remark, c_create_time, c_modify_time" +
+		" from t_plan where c_owner_id = ? and c_deleted = false order by %s limit ?, ?;"
+	var sqlCommand string = fmt.Sprintf(sqlCommandPre, req.SortBy)
+	rows, err := db.DB.Query(sqlCommand, userID, req.Offset, req.Count)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error))
+		return
+	}
+
+	var planSummarys []dto.PlanSummary = make([]dto.PlanSummary, 0)
+	for rows.Next() {
+		var planSummary dto.PlanSummary
+		rows.Scan(&planSummary.ID,
+			&planSummary.Name,
+			&planSummary.Remark,
+			&planSummary.CreateTime,
+			&planSummary.ModifyTime)
+
+		planSummarys = append(planSummarys, planSummary)
+	}
+	rows.Close()
+
+	c.JSON(http.StatusOK,
+		dto.NewResponseFine(dto.PlanGetListRes{Count: int64(len(planSummarys)), Plans: planSummarys}))
 }
 
 // check delete status

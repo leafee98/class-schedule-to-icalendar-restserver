@@ -53,6 +53,22 @@ type PlanRemoveReq struct {
 
 type PlanRemoveRes string
 
+type PlanGetListReq struct {
+	// available value: "createTime", "modifyTime", "name", "id"
+	SortBy string `json:"sortBy" binding:"required"`
+
+	// will make response's Count to zero when Offset is bigger than the number of config belongs to user
+	Offset int64 `json:"offset"`
+
+	// max 30
+	Count int64 `json:"count" binding:"required"`
+}
+
+type PlanGetListRes struct {
+	Count int64         `json:"count" binding:"required"`
+	Plans []PlanSummary `json:"plans" binding:"required"`
+}
+
 type PlanCreateTokenReq struct {
 	ID int64 `json:"id" binding:"required"`
 }
