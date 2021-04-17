@@ -19,6 +19,7 @@ func init() {
 	RegisterRouter("plan-remove-config", "post", planRemoveConfig)
 	RegisterRouter("plan-get-by-id", "post", planGetById)
 	RegisterRouter("plan-remove", "post", planRemove)
+	RegisterRouter("plan-modify", "post", planModify)
 	RegisterRouter("plan-get-list", "post", planGetList)
 	RegisterRouter("plan-create-token", "post", planCreateToken)
 	RegisterRouter("plan-revoke-token", "post", planRevokeToken)
@@ -222,6 +223,35 @@ func planRemove(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanRemoveRes("ok")))
 	} else {
 		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad("deleted nothing"))
+	}
+}
+
+func planModify(c *gin.Context) {
+	var req dto.PlanModifyReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	if planOwnerShipOrAbort(c, req.ID, userID) != nil {
+		return
+	}
+
+	const sqlCommand = "update t_plan set c_name = ?, c_remark = ?  where c_id = ?;"
+	res, err := db.DB.Exec(sqlCommand, req.Name, req.Remark, req.ID)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+	if affected, _ := res.RowsAffected(); affected > 0 {
+		c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanRemoveRes("ok")))
+	} else {
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad("updated nothing"))
 	}
 }
 

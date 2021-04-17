@@ -53,6 +53,14 @@ type PlanRemoveReq struct {
 
 type PlanRemoveRes string
 
+type PlanModifyReq struct {
+	ID     int64  `json:"id" binding:"required"`
+	Name   string `json:"name" binding:"required"`
+	Remark string `json:"remark" binding:"required"`
+}
+
+type PlanModifyRes string
+
 type PlanGetListReq struct {
 	// available value: "createTime", "modifyTime", "name", "id"
 	SortBy string `json:"sortBy" binding:"required"`
