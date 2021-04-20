@@ -25,6 +25,12 @@ type ConfigDetail struct {
 	ModifyTime time.Time `db:"c_modify_time" json:"modifyTime" binding:"required"`
 }
 
+type ConfigShareDetail struct {
+	ID         int64     `db:"c_id" json:"id" binding:"required"`
+	Remark     string    `db:"c_remark" json:"remark" binding:"required"`
+	CreateTime time.Time `db:"c_create_time" json:"createTime" binding:"required"`
+}
+
 type PlanTokenDetail struct {
 	Token      string    `json:"tokens" binding:"required"`
 	CreateTime time.Time `json:"createTime" binding:"required"`

@@ -47,7 +47,7 @@ func bindOrAbort(c *gin.Context, req interface{}) error {
 
 // return nil if plan exist.
 func planExist(planID int64) error {
-	row := db.DB.QueryRow("select c_id from t_plan where c_id = ?", planID)
+	row := db.DB.QueryRow("select c_id from t_plan where c_id = ? and c_deleted = false", planID)
 	return row.Scan(&planID)
 }
 
@@ -152,4 +152,31 @@ func relationExist(planID int64, configID int64) error {
 			return errors.New("no such relation")
 		}
 	}
+}
+
+////// Config Share Part //////
+
+func configShareOwnership(configShareID int64, userID int64) error {
+	var dbUserID int64
+	const sqlCommand string = "select c_owner_id from t_config where c_deleted = false and c_id = " +
+		"(select c_config_id from t_config_share where c_deleted = false and c_id = ?);"
+	row := db.DB.QueryRow(sqlCommand, configShareID)
+	err := row.Scan(&dbUserID)
+	if err == sql.ErrNoRows {
+		return errors.New("the config share doesn't exist")
+	} else if err != nil {
+		return err
+	}
+	if dbUserID != userID {
+		return errors.New("you are not the owner of the config's share")
+	}
+	return nil
+}
+
+func configShareOwnershipOrAbort(c *gin.Context, configShareID int64, userID int64) error {
+	err := configShareOwnership(configShareID, userID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad(err.Error()))
+	}
+	return err
 }

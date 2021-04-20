@@ -97,3 +97,33 @@ type ConfigGetListRes struct {
 	Count   int64           `json:"count" binding:"required"`
 	Configs []ConfigSummary `json:"configs" binding:"required"`
 }
+
+type ConfigShareCreateReq struct {
+	ID     int64  `db:"c_id" json:"id" binding:"required"`
+	Remark string `db:"c_remark" json:"remark" binding:"required"`
+}
+
+type ConfigShareCreateRes struct {
+	ID int64 `db:"c_id" json:"id" binding:"required"`
+}
+
+type ConfigShareModifyReq struct {
+	ID     int64  `db:"c_id" json:"id" binding:"required"`
+	Remark string `db:"c_remark" json:"remark" binding:"required"`
+}
+
+type ConfigShareModifyRes string
+
+type ConfigShareRevokeReq struct {
+	ID int64 `db:"c_id" json:"id" binding:"required"`
+}
+
+type ConfigShareRevokeRes string
+
+type ConfigShareGetListReq struct {
+	ID int64 `db:"c_id" json:"id" binding:"required"`
+}
+
+type ConfigShareGetListRes struct {
+	Shares []ConfigShareDetail `json:"Shares" binding:"required"`
+}

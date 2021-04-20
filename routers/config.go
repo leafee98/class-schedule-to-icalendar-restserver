@@ -17,6 +17,10 @@ func init() {
 	RegisterRouter("/config-modify", "post", configModify)
 	RegisterRouter("/config-remove", "post", configRemove)
 	RegisterRouter("/config-get-list", "post", configGetList)
+	RegisterRouter("/config-share-create", "post", configShareCreate)
+	RegisterRouter("/config-share-modify", "post", configShareModify)
+	RegisterRouter("/config-share-revoke", "post", configShareRevoke)
+	RegisterRouter("/config-share-get-list", "post", configShareGetList)
 }
 
 // ConfigCreate will create a new Config
@@ -155,7 +159,7 @@ func configModify(c *gin.Context) {
 	}
 
 	// update the config
-	res, err := db.DB.Exec("update t_config"+
+	_, err = db.DB.Exec("update t_config"+
 		" set c_name=?, c_content=?, c_format=?, c_remark=?"+
 		" where c_id = ?",
 		req.Name, req.Content, req.Format, req.Remark, req.ID)
@@ -163,12 +167,7 @@ func configModify(c *gin.Context) {
 		logrus.Error(err.Error())
 		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
 	} else {
-		affected, _ := res.RowsAffected()
-		if affected > 0 {
-			c.JSON(http.StatusOK, dto.NewResponseFine(dto.ConfigModifyRes("ok")))
-		} else {
-			c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad(dto.ConfigModifyRes("bad")))
-		}
+		c.JSON(http.StatusOK, dto.NewResponseFine(dto.ConfigModifyRes("ok")))
 	}
 }
 
@@ -203,7 +202,7 @@ func configRemove(c *gin.Context) {
 	if affected, _ := res.RowsAffected(); affected > 0 {
 		c.JSON(http.StatusOK, dto.NewResponseFine(dto.ConfigRemoveRes("ok")))
 	} else {
-		c.JSON(http.StatusBadGateway, dto.NewResponseFine(dto.ConfigRemoveRes("bad")))
+		c.JSON(http.StatusBadGateway, dto.NewResponseBad("bad"))
 	}
 }
 
@@ -265,4 +264,120 @@ func configGetList(c *gin.Context) {
 
 	c.JSON(http.StatusOK,
 		dto.NewResponseFine(dto.ConfigGetListRes{Count: int64(len(configSummarys)), Configs: configSummarys}))
+}
+
+func configShareCreate(c *gin.Context) {
+	var req dto.ConfigShareCreateReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// check existence and ownership
+	if configOwnershipOrAbort(c, req.ID, userID) != nil {
+		return
+	}
+
+	const sqlCommand string = "insert into t_config_share (c_config_id, c_remark) values (?, ?);"
+	res, err := db.DB.Exec(sqlCommand, req.ID, req.Remark)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+	inserted, _ := res.LastInsertId()
+	c.JSON(http.StatusOK, dto.NewResponseFine(dto.ConfigShareCreateRes{ID: inserted}))
+}
+
+func configShareModify(c *gin.Context) {
+	var req dto.ConfigShareCreateReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// check existence and ownership
+	if configShareOwnershipOrAbort(c, req.ID, userID) != nil {
+		return
+	}
+
+	const sqlCommand = "update t_config_share set c_remark = ? where c_id = ?;"
+	_, err := db.DB.Exec(sqlCommand, req.Remark, req.ID)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, dto.NewResponseFine(dto.ConfigShareModifyRes("ok")))
+}
+
+func configShareRevoke(c *gin.Context) {
+	var req dto.ConfigShareRevokeReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// check existence and ownership
+	if configShareOwnershipOrAbort(c, req.ID, userID) != nil {
+		return
+	}
+
+	_, err := db.DB.Exec("update t_config_share set c_deleted = true where c_id = ?;", req.ID)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, dto.NewResponseFine(dto.ConfigShareRevokeRes("ok")))
+}
+
+func configShareGetList(c *gin.Context) {
+	var req dto.ConfigShareGetListReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// check existence and ownership
+	if configOwnershipOrAbort(c, req.ID, userID) != nil {
+		return
+	}
+
+	const sqlCommand = "select c_id, c_create_time, c_remark from t_config_share " +
+		"where c_deleted = false and c_config_id = ?;"
+	rows, err := db.DB.Query(sqlCommand, req.ID)
+	defer rows.Close()
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+	var shareDetails []dto.ConfigShareDetail = make([]dto.ConfigShareDetail, 0)
+	for rows.Next() {
+		var shareDetail dto.ConfigShareDetail
+		if err := rows.Scan(&shareDetail.ID, &shareDetail.CreateTime, &shareDetail.Remark); err != nil {
+			logrus.Error(err)
+			c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+			return
+		}
+		shareDetails = append(shareDetails, shareDetail)
+	}
+	c.JSON(http.StatusOK, dto.NewResponseFine(dto.ConfigShareGetListRes{Shares: shareDetails}))
 }
