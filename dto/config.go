@@ -125,5 +125,5 @@ type ConfigShareGetListReq struct {
 }
 
 type ConfigShareGetListRes struct {
-	Shares []ConfigShareDetail `json:"Shares" binding:"required"`
+	Shares []ConfigShareDetail `json:"shares" binding:"required"`
 }

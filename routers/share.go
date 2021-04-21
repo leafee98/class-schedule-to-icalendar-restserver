@@ -80,7 +80,7 @@ func planOwnerShip(planID int64, userID int64) error {
 	return nil
 }
 
-func planOwnerShipOrAbort(c *gin.Context, planID int64, userID int64) error {
+func planOwnershipOrAbort(c *gin.Context, planID int64, userID int64) error {
 	err := planOwnerShip(planID, userID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad(err.Error()))
@@ -175,6 +175,33 @@ func configShareOwnership(configShareID int64, userID int64) error {
 
 func configShareOwnershipOrAbort(c *gin.Context, configShareID int64, userID int64) error {
 	err := configShareOwnership(configShareID, userID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad(err.Error()))
+	}
+	return err
+}
+
+/////// Plan Share Part ///////
+
+func planShareOwnership(configShareID int64, userID int64) error {
+	var dbUserID int64
+	const sqlCommand string = "select c_owner_id from t_plan where c_deleted = false and c_id = " +
+		"(select c_plan_id from t_plan_share where c_deleted = false and c_id = ?);"
+	row := db.DB.QueryRow(sqlCommand, configShareID)
+	err := row.Scan(&dbUserID)
+	if err == sql.ErrNoRows {
+		return errors.New("the config share doesn't exist")
+	} else if err != nil {
+		return err
+	}
+	if dbUserID != userID {
+		return errors.New("you are not the owner of the config's share")
+	}
+	return nil
+}
+
+func planShareOwnershipOrAbort(c *gin.Context, configShareID int64, userID int64) error {
+	err := planShareOwnership(configShareID, userID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad(err.Error()))
 	}
