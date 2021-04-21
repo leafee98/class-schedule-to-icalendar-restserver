@@ -101,3 +101,33 @@ type PlanGetTokenListRes struct {
 	Tokens []PlanTokenDetail `json:"tokens" binding:"required"`
 	Count  int64             `json:"count" binding:"required"`
 }
+
+type PlanShareCreateReq struct {
+	ID     int64  `db:"c_id" json:"id" binding:"required"`
+	Remark string `db:"c_remark" json:"remark" binding:"required"`
+}
+
+type PlanShareCreateRes struct {
+	ID int64 `db:"c_id" json:"id" binding:"required"`
+}
+
+type PlanShareModifyReq struct {
+	ID     int64  `db:"c_id" json:"id" binding:"required"`
+	Remark string `db:"c_remark" json:"remark" binding:"required"`
+}
+
+type PlanShareModifyRes string
+
+type PlanShareRevokeReq struct {
+	ID int64 `db:"c_id" json:"id" binding:"required"`
+}
+
+type PlanShareRevokeRes string
+
+type PlanShareGetListReq struct {
+	ID int64 `db:"c_id" json:"id" binding:"required"`
+}
+
+type PlanShareGetListRes struct {
+	Shares []PlanShareDetail `json:"Shares" binding:"required"`
+}

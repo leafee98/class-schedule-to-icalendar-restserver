@@ -43,3 +43,9 @@ type PlanSummary struct {
 	CreateTime time.Time `db:"c_create_time" json:"createTime" binding:"required"`
 	ModifyTime time.Time `db:"c_modify_time" json:"modifyTime" binding:"required"`
 }
+
+type PlanShareDetail struct {
+	ID         int64     `db:"c_id" json:"id" binding:"required"`
+	Remark     string    `db:"c_remark" json:"remark" binding:"required"`
+	CreateTime time.Time `db:"c_create_time" json:"createTime" binding:"required"`
+}

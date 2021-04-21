@@ -20,9 +20,15 @@ func init() {
 	RegisterRouter("plan-remove", "post", planRemove)
 	RegisterRouter("plan-modify", "post", planModify)
 	RegisterRouter("plan-get-list", "post", planGetList)
+
 	RegisterRouter("plan-create-token", "post", planCreateToken)
 	RegisterRouter("plan-revoke-token", "post", planRevokeToken)
 	RegisterRouter("plan-get-token-list", "post", planGetTokenList)
+
+	RegisterRouter("/plan-share-create", "post", planShareCreate)
+	RegisterRouter("/plan-share-modify", "post", planShareModify)
+	RegisterRouter("/plan-share-revoke", "post", planShareRevoke)
+	RegisterRouter("/plan-share-get-list", "post", planShareGetList)
 }
 
 // create a plan
@@ -70,7 +76,7 @@ func planAddConfig(c *gin.Context) {
 	}
 
 	// check ownership
-	if planOwnerShipOrAbort(c, req.PlanID, userID) != nil {
+	if planOwnershipOrAbort(c, req.PlanID, userID) != nil {
 		return
 	}
 	if configOwnershipOrAbort(c, req.ConfigID, userID) != nil {
@@ -111,7 +117,7 @@ func planRemoveConfig(c *gin.Context) {
 	}
 
 	// check ownership
-	if planOwnerShipOrAbort(c, req.PlanID, userID) != nil {
+	if planOwnershipOrAbort(c, req.PlanID, userID) != nil {
 		return
 	}
 	if configOwnershipOrAbort(c, req.ConfigID, userID) != nil {
@@ -154,7 +160,7 @@ func planGetById(c *gin.Context) {
 		return
 	}
 
-	if planOwnerShipOrAbort(c, req.ID, userID) != nil {
+	if planOwnershipOrAbort(c, req.ID, userID) != nil {
 		return
 	}
 
@@ -207,7 +213,7 @@ func planRemove(c *gin.Context) {
 		return
 	}
 
-	if planOwnerShipOrAbort(c, req.ID, userID) != nil {
+	if planOwnershipOrAbort(c, req.ID, userID) != nil {
 		return
 	}
 
@@ -236,7 +242,7 @@ func planModify(c *gin.Context) {
 		return
 	}
 
-	if planOwnerShipOrAbort(c, req.ID, userID) != nil {
+	if planOwnershipOrAbort(c, req.ID, userID) != nil {
 		return
 	}
 
@@ -320,7 +326,7 @@ func planCreateToken(c *gin.Context) {
 	}
 
 	// existence and ownership
-	if planOwnerShipOrAbort(c, req.ID, userID) != nil {
+	if planOwnershipOrAbort(c, req.ID, userID) != nil {
 		return
 	}
 
@@ -375,7 +381,7 @@ func planRevokeToken(c *gin.Context) {
 		return
 	}
 
-	if planOwnerShipOrAbort(c, planID, userID) != nil {
+	if planOwnershipOrAbort(c, planID, userID) != nil {
 		return
 	}
 
@@ -406,7 +412,7 @@ func planGetTokenList(c *gin.Context) {
 		return
 	}
 
-	if planOwnerShipOrAbort(c, req.ID, userID) != nil {
+	if planOwnershipOrAbort(c, req.ID, userID) != nil {
 		return
 	}
 
@@ -424,4 +430,120 @@ func planGetTokenList(c *gin.Context) {
 	}
 	rows.Close()
 	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanGetTokenListRes{Count: int64(len(tokens)), Tokens: tokens}))
+}
+
+func planShareCreate(c *gin.Context) {
+	var req dto.PlanShareCreateReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// check existence and ownership
+	if planOwnershipOrAbort(c, req.ID, userID) != nil {
+		return
+	}
+
+	const sqlCommand string = "insert into t_plan_share (c_plan_id, c_remark) values (?, ?);"
+	res, err := db.DB.Exec(sqlCommand, req.ID, req.Remark)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+	inserted, _ := res.LastInsertId()
+	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanShareCreateRes{ID: inserted}))
+}
+
+func planShareModify(c *gin.Context) {
+	var req dto.PlanShareModifyReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// check existence and ownership
+	if planShareOwnershipOrAbort(c, req.ID, userID) != nil {
+		return
+	}
+
+	const sqlCommand = "update t_plan_share set c_remark = ? where c_id = ?;"
+	_, err := db.DB.Exec(sqlCommand, req.Remark, req.ID)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanShareModifyRes("ok")))
+}
+
+func planShareRevoke(c *gin.Context) {
+	var req dto.PlanShareRevokeReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// check existence and ownership
+	if planShareOwnershipOrAbort(c, req.ID, userID) != nil {
+		return
+	}
+
+	_, err := db.DB.Exec("update t_plan_share set c_deleted = true where c_id = ?;", req.ID)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanShareRevokeRes("ok")))
+}
+
+func planShareGetList(c *gin.Context) {
+	var req dto.PlanShareGetListReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// check existence and ownership
+	if configOwnershipOrAbort(c, req.ID, userID) != nil {
+		return
+	}
+
+	const sqlCommand = "select c_id, c_create_time, c_remark from t_plan_share " +
+		"where c_deleted = false and c_plan_id = ?;"
+	rows, err := db.DB.Query(sqlCommand, req.ID)
+	defer rows.Close()
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+	var shareDetails []dto.PlanShareDetail = make([]dto.PlanShareDetail, 0)
+	for rows.Next() {
+		var shareDetail dto.PlanShareDetail
+		if err := rows.Scan(&shareDetail.ID, &shareDetail.CreateTime, &shareDetail.Remark); err != nil {
+			logrus.Error(err)
+			c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+			return
+		}
+		shareDetails = append(shareDetails, shareDetail)
+	}
+	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanShareGetListRes{Shares: shareDetails}))
 }

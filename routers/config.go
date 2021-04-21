@@ -17,6 +17,7 @@ func init() {
 	RegisterRouter("/config-modify", "post", configModify)
 	RegisterRouter("/config-remove", "post", configRemove)
 	RegisterRouter("/config-get-list", "post", configGetList)
+
 	RegisterRouter("/config-share-create", "post", configShareCreate)
 	RegisterRouter("/config-share-modify", "post", configShareModify)
 	RegisterRouter("/config-share-revoke", "post", configShareRevoke)
@@ -294,7 +295,7 @@ func configShareCreate(c *gin.Context) {
 }
 
 func configShareModify(c *gin.Context) {
-	var req dto.ConfigShareCreateReq
+	var req dto.ConfigShareModifyReq
 	if bindOrAbort(c, &req) != nil {
 		return
 	}
