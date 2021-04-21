@@ -14,6 +14,7 @@ import (
 func init() {
 	RegisterRouter("/config-create", "post", configCreate)
 	RegisterRouter("/config-get-by-id", "post", configGetByID)
+	RegisterRouter("/config-get-by-share", "post", configGetByShare)
 	RegisterRouter("/config-modify", "post", configModify)
 	RegisterRouter("/config-remove", "post", configRemove)
 	RegisterRouter("/config-get-list", "post", configGetList)
@@ -80,30 +81,57 @@ func configGetByID(c *gin.Context) {
 
 	// get the config detail
 	var res dto.ConfigGetRes
-	var deleted bool
 	var ownerID int64
 	row := db.DB.QueryRow(
-		"select c_id, c_type, c_name, c_content, c_format,"+
-			"c_remark, c_create_time, c_modify_time,"+
-			"c_deleted, c_owner_id from t_config where c_id = ?", req.ID)
+		"select c_id, c_type, c_name, c_content, c_format, c_remark, c_create_time, c_modify_time, c_owner_id "+
+			"from t_config where c_deleted = false and c_id = ?", req.ID)
 	err := row.Scan(&res.ID, &res.Type, &res.Name, &res.Content, &res.Format,
-		&res.Remark, &res.CreateTime, &res.ModifyTime,
-		&deleted, &ownerID)
+		&res.Remark, &res.CreateTime, &res.ModifyTime, &ownerID)
 
-	if err != sql.ErrNoRows && err != nil {
-		// unknown error
-		logrus.Error(err.Error())
-		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
-	} else if err == sql.ErrNoRows || deleted {
-		// no such config or deleted
-		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("config not exists"))
-	} else if err == nil {
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("config not exists"))
+		} else {
+			logrus.Error(err.Error())
+			c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		}
+	} else {
 		// check ownership
 		if userID == ownerID {
 			c.JSON(http.StatusOK, dto.NewResponseFine(res))
 		} else {
 			c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("you are not the owner of the config"))
 		}
+	}
+}
+
+// no need to login
+func configGetByShare(c *gin.Context) {
+	// bind request
+	var req dto.ConfigGetByShareReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	// get the config detail from share id
+	var res dto.ConfigGetRes
+	var ownerID int64
+	row := db.DB.QueryRow(
+		"select c_id, c_type, c_name, c_content, c_format, c_remark, c_create_time, c_modify_time, c_owner_id "+
+			"from t_config where c_deleted = false and c_id = "+
+			"(select c_config_id from t_config_share where c_id = ?);", req.ID)
+	err := row.Scan(&res.ID, &res.Type, &res.Name, &res.Content, &res.Format,
+		&res.Remark, &res.CreateTime, &res.ModifyTime, &ownerID)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("config or config share not exists"))
+		} else {
+			logrus.Error(err.Error())
+			c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		}
+	} else {
+		c.JSON(http.StatusOK, dto.NewResponseFine(res))
 	}
 }
 
