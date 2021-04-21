@@ -73,5 +73,5 @@ func RegisterToken(userID int64, duration int) string {
 
 // ExpireToken will remove the token in userTokenMap
 func ExpireToken(token string) {
-	db.DB.Exec("deleted from t_login_token where c_token = ?", token)
+	db.DB.Exec("delete from t_login_token where c_token = ?", token)
 }
