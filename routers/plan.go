@@ -2,6 +2,7 @@ package routers
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -17,6 +18,7 @@ func init() {
 	RegisterRouter("plan-add-config", "post", planAddConfig)
 	RegisterRouter("plan-remove-config", "post", planRemoveConfig)
 	RegisterRouter("plan-get-by-id", "post", planGetById)
+	RegisterRouter("plan-get-by-share", "post", planGetByShare)
 	RegisterRouter("plan-remove", "post", planRemove)
 	RegisterRouter("plan-modify", "post", planModify)
 	RegisterRouter("plan-get-list", "post", planGetList)
@@ -164,42 +166,36 @@ func planGetById(c *gin.Context) {
 		return
 	}
 
-	var res dto.PlanGetByIdRes
-	res.Configs = make([]dto.ConfigDetail, 0)
-
-	const sqlCommandGetPlan string = "select c_id, c_name, c_remark, c_create_time, c_modify_time " +
-		"from t_plan where c_id = ?;"
-	row := db.DB.QueryRow(sqlCommandGetPlan, req.ID)
-	err := row.Scan(&res.ID, &res.Name, &res.Remark, &res.CreateTime, &res.ModifyTime)
-	if err != nil {
+	var res dto.PlanGetRes
+	if err := planGetRes(&res, req.ID); err != nil {
 		logrus.Error(err)
 		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+	} else {
+		c.JSON(http.StatusOK, dto.NewResponseFine(res))
+	}
+}
+
+func planGetByShare(c *gin.Context) {
+	var req dto.PlanGetByShareReq
+	if bindOrAbort(c, &req) != nil {
 		return
 	}
 
-	const sqlCommandGetConfigs = "select " +
-		"c_id, c_type, c_name, c_content, c_format, c_remark, c_create_time, c_modify_time " +
-		"from t_config where c_id in (select c_config_id from t_plan_config_relation where c_plan_id = ?);"
-	rows, err := db.DB.Query(sqlCommandGetConfigs, req.ID)
-	defer rows.Close()
-	if err != nil {
-		logrus.Error(err)
-		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+	// get plan id
+	var planID int64
+	row := db.DB.QueryRow("select c_plan_id from t_plan_share where c_id = ?;", req.ID)
+	if err := row.Scan(&planID); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("plan share not exist"))
 		return
 	}
 
-	for rows.Next() {
-		var co dto.ConfigDetail
-		err = rows.Scan(&co.ID, &co.Type, &co.Name, &co.Content, &co.Format, &co.Remark, &co.CreateTime, &co.ModifyTime)
-		if err != nil {
-			logrus.Error(err)
-			c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
-			return
-		}
-		res.Configs = append(res.Configs, co)
+	var res dto.PlanGetRes
+	if err := planGetRes(&res, planID); err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+	} else {
+		c.JSON(http.StatusOK, dto.NewResponseFine(res))
 	}
-
-	c.JSON(http.StatusOK, dto.NewResponseFine(res))
 }
 
 func planRemove(c *gin.Context) {
@@ -546,4 +542,43 @@ func planShareGetList(c *gin.Context) {
 		shareDetails = append(shareDetails, shareDetail)
 	}
 	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanShareGetListRes{Shares: shareDetails}))
+}
+
+////////////////////////////////////////////////
+/////////////////// Utilities //////////////////
+////////////////////////////////////////////////
+
+func planGetRes(plan *dto.PlanGetRes, planID int64) error {
+	plan.Configs = make([]dto.ConfigDetail, 0)
+
+	const sqlCommandGetPlan string = "select c_id, c_name, c_remark, c_create_time, c_modify_time " +
+		"from t_plan where c_deleted = false and c_id = ?;"
+	row := db.DB.QueryRow(sqlCommandGetPlan, planID)
+	if err := row.Scan(&plan.ID, &plan.Name, &plan.Remark, &plan.CreateTime, &plan.ModifyTime); err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("plan not exist")
+		} else {
+			return err
+		}
+	}
+
+	const sqlCommandGetConfigs = "select " +
+		"c_id, c_type, c_name, c_content, c_format, c_remark, c_create_time, c_modify_time " +
+		"from t_config where c_id in (select c_config_id from t_plan_config_relation where c_plan_id = ?);"
+	rows, err := db.DB.Query(sqlCommandGetConfigs, planID)
+	defer rows.Close()
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		var co dto.ConfigDetail
+		err = rows.Scan(&co.ID, &co.Type, &co.Name, &co.Content, &co.Format, &co.Remark, &co.CreateTime, &co.ModifyTime)
+		if err != nil {
+			return err
+		}
+		plan.Configs = append(plan.Configs, co)
+	}
+
+	return nil
 }

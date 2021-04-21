@@ -37,7 +37,12 @@ type PlanGetByIdReq struct {
 	ID int64 `json:"id" binding:"required"`
 }
 
-type PlanGetByIdRes struct {
+type PlanGetByShareReq struct {
+	ID int64 `json:"id" binding:"required"`
+}
+
+// response of PlanGetBy.. request
+type PlanGetRes struct {
 	Name       string         `json:"name" binding:"required"`
 	Remark     string         `json:"remark" binding:"required"`
 	ID         int64          `json:"id" binding:"required"`
