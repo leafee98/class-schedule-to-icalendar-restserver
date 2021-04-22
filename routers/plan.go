@@ -543,7 +543,6 @@ func planShareGetList(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanShareGetListRes{Shares: shareDetails}))
 }
-<<<<<<< HEAD
 
 ////////////////////////////////////////////////
 /////////////////// Utilities //////////////////
@@ -583,5 +582,3 @@ func planGetRes(plan *dto.PlanGetRes, planID int64) error {
 
 	return nil
 }
-=======
->>>>>>> origin/master
