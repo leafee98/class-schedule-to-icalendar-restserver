@@ -17,6 +17,8 @@ func init() {
 	RegisterRouter("plan-create", "post", planCreate)
 	RegisterRouter("plan-add-config", "post", planAddConfig)
 	RegisterRouter("plan-remove-config", "post", planRemoveConfig)
+	RegisterRouter("plan-add-share", "post", planAddShare)
+	RegisterRouter("plan-remove-share", "post", planRemoveShare)
 	RegisterRouter("plan-get-by-id", "post", planGetById)
 	RegisterRouter("plan-get-by-share", "post", planGetByShare)
 	RegisterRouter("plan-remove", "post", planRemove)
@@ -93,16 +95,14 @@ func planAddConfig(c *gin.Context) {
 	}
 
 	// create relation
-	res, err := db.DB.Exec("insert into t_plan_config_relation (c_plan_id, c_config_id) values (?, ?)",
+	_, err := db.DB.Exec("insert into t_plan_config_relation (c_plan_id, c_config_id) values (?, ?)",
 		req.PlanID, req.ConfigID)
 	if err != nil {
 		logrus.Error(err)
 		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
 		return
 	}
-
-	relationID, _ := res.LastInsertId()
-	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanAddConfigRes{ID: relationID}))
+	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanAddConfigRes("ok")))
 }
 
 func planRemoveConfig(c *gin.Context) {
@@ -146,6 +146,91 @@ func planRemoveConfig(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.NewResponseFine("ok"))
 	} else {
 		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad("no relation deleted"))
+	}
+}
+
+// check login status
+// check if plan & config share exist
+// check if the relation already exist
+// check plan ownership
+func planAddShare(c *gin.Context) {
+	// bind request
+	var req dto.PlanAddShareReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	// check login status
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// check plan ownership
+	if planOwnershipOrAbort(c, req.PlanID, userID) != nil {
+		return
+	}
+	// check config share existence
+	if configShareExistOrAbort(c, req.ConfigShareID) != nil {
+		return
+	}
+
+	// check relation exist
+	err3 := relationShareExist(req.PlanID, req.ConfigShareID)
+	if err3 == nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("this config share already added to the plan"))
+		return
+	}
+
+	// create relation
+	_, err := db.DB.Exec("insert into t_plan_config_share_relation (c_plan_id, c_config_share_id) values (?, ?);",
+		req.PlanID, req.ConfigShareID)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, dto.NewResponseFine(dto.PlanAddConfigRes("ok")))
+}
+
+func planRemoveShare(c *gin.Context) {
+	// bind request
+	var req dto.PlanRemoveShareReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	// check login status
+	var userID int64
+	if getUserIDOrAbort(c, &userID) != nil {
+		return
+	}
+
+	// check plan ownership
+	if planOwnershipOrAbort(c, req.PlanID, userID) != nil {
+		return
+	}
+
+	// check relation of share exist
+	err3 := relationShareExist(req.PlanID, req.ConfigShareID)
+	if err3 != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("this config haven't been added to the plan"))
+		return
+	}
+
+	// remove the relation
+	const sqlCommand string = `delete from t_plan_config_share_relation where c_plan_id = ? and c_config_share_id = ?;`
+	res, err := db.DB.Exec(sqlCommand, req.PlanID, req.ConfigShareID)
+	if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
+		return
+	}
+
+	if affected, _ := res.RowsAffected(); affected > 0 {
+		c.JSON(http.StatusOK, dto.NewResponseFine("ok"))
+	} else {
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad("no relation of share deleted"))
 	}
 }
 
@@ -550,6 +635,7 @@ func planShareGetList(c *gin.Context) {
 
 func planGetRes(plan *dto.PlanGetRes, planID int64) error {
 	plan.Configs = make([]dto.ConfigDetail, 0)
+	plan.Shares = make([]dto.ConfigDetail, 0)
 
 	const sqlCommandGetPlan string = "select c_id, c_name, c_remark, c_create_time, c_modify_time " +
 		"from t_plan where c_deleted = false and c_id = ?;"
@@ -578,6 +664,36 @@ func planGetRes(plan *dto.PlanGetRes, planID int64) error {
 			return err
 		}
 		plan.Configs = append(plan.Configs, co)
+	}
+
+	const sqlCommandGetShares = "" +
+		"select s.c_id, c.c_type, c.c_name, c.c_content, c.c_format, c.c_remark, c.c_create_time, c.c_modify_time " +
+		"from " +
+		"	t_config as c " +
+		"	join t_config_share as s " +
+		"	on c.c_id = s.c_config_id " +
+		"where " +
+		"	c.c_deleted = false " +
+		"	and s.c_deleted = false " +
+		"	and	s.c_id in ( " +
+		"		select c_config_share_id " +
+		"		from t_plan_config_share_relation " +
+		"		where c_plan_id = ? " +
+		"	);"
+	rowsShare, err := db.DB.Query(sqlCommandGetShares, planID)
+	defer rowsShare.Close()
+	if err != nil {
+		return err
+	}
+
+	for rowsShare.Next() {
+		var cs dto.ConfigDetail
+		err = rowsShare.Scan(&cs.ID, &cs.Type, &cs.Name, &cs.Content, &cs.Format, &cs.Remark, &cs.CreateTime,
+			&cs.ModifyTime)
+		if err != nil {
+			return err
+		}
+		plan.Shares = append(plan.Shares, cs)
 	}
 
 	return nil

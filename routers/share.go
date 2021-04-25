@@ -154,7 +154,50 @@ func relationExist(planID int64, configID int64) error {
 	}
 }
 
+///// Relation share Part /////
+
+// return nil if exist
+func relationShareExist(planID int64, configShareID int64) error {
+	var cnt int64
+	row := db.DB.QueryRow("select count(*) as cnt from t_plan_config_share_relation "+
+		"where c_plan_id = ? and c_config_share_id = ?", planID, configShareID)
+	err := row.Scan(&cnt)
+
+	// sql.ErrNoRows will never occur
+	if err != nil {
+		return err
+	} else {
+		if cnt > 0 {
+			return nil
+		} else {
+			return errors.New("no such relation")
+		}
+	}
+}
+
 ////// Config Share Part //////
+
+func configShareExist(configShareID int64) error {
+	var count int64
+	row := db.DB.QueryRow("select count(*) from t_config_share where c_deleted = false and c_id = ?;", configShareID)
+	if err := row.Scan(&count); err != nil {
+		return err
+	} else {
+		if count > 0 {
+			return nil
+		} else {
+			return errors.New("config share not exist or has been deleted")
+		}
+	}
+}
+
+func configShareExistOrAbort(c *gin.Context, configShareID int64) error {
+	err := configShareExist(configShareID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad(err.Error()))
+	}
+	return err
+}
 
 func configShareOwnership(configShareID int64, userID int64) error {
 	var dbUserID int64

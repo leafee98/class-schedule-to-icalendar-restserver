@@ -22,9 +22,7 @@ type PlanAddConfigReq struct {
 	ConfigID int64 `json:"configId" binding:"required"`
 }
 
-type PlanAddConfigRes struct {
-	ID int64 `json:"id" binding:"required"`
-}
+type PlanAddConfigRes string
 
 type PlanRemoveConfigReq struct {
 	PlanID   int64 `json:"planId" binding:"required"`
@@ -32,6 +30,20 @@ type PlanRemoveConfigReq struct {
 }
 
 type PlanRemoveConfigRes string
+
+type PlanAddShareReq struct {
+	PlanID        int64 `json:"planId" binding:"required"`
+	ConfigShareID int64 `json:"configShareId" binding:"required"`
+}
+
+type PlanAddShareRes string
+
+type PlanRemoveShareReq struct {
+	PlanID        int64 `json:"planId" binding:"required"`
+	ConfigShareID int64 `json:"configShareId" binding:"required"`
+}
+
+type PlanRemoveShareRes string
 
 type PlanGetByIdReq struct {
 	ID int64 `json:"id" binding:"required"`
@@ -49,7 +61,9 @@ type PlanGetRes struct {
 	CreateTime time.Time      `json:"createTime" binding:"required"`
 	ModifyTime time.Time      `json:"modifyTime" binding:"required"`
 	Configs    []ConfigDetail `json:"configs" binding:"required"`
-	// todo: config shared and added
+
+	// the share's detail is the same as configs, but its ID is shareID, not configID
+	Shares []ConfigDetail `json:"shares" binding:"required"`
 }
 
 type PlanRemoveReq struct {
