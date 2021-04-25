@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"strings"
@@ -13,7 +14,7 @@ import (
 )
 
 func init() {
-	RegisterRouter("/generate-by-plan", "get", generateByPlanToken)
+	RegisterRouter("/generate-by-plan-token", "get", generateByPlanToken)
 }
 
 // require the token in get request
@@ -26,15 +27,47 @@ func generateByPlanToken(c *gin.Context) {
 		return
 	}
 
-	const sqlGetConfig string = `select c_content, c_type, c_format from t_config 
-		where c_id in (select c_config_id from t_plan_config_relation
-			where c_plan_id in (
-				select c_plan_id from t_plan_token where c_token = ?
+	const sqlGetPlanId string = `
+		select c_id from t_plan where c_deleted = false and c_id = (
+			select c_plan_id from t_plan_token where c_token = ?);`
+	const sqlGetConfig string = `
+		select c_content, c_type, c_format
+		from t_config
+		where c_deleted = false 
+			and c_id in (
+				select c_config_id
+				from t_plan_config_relation
+				where c_plan_id = ?
 			)
-		)
-		and c_deleted = false;`
+		union all
+		select c_content, c_type, c_format
+		from t_config
+		where c_deleted = false
+			and c_id in (
+				select c_config_id
+				from t_config_share
+				where c_deleted = false
+					and c_id in (
+						select c_config_share_id
+						from t_plan_config_share_relation
+						where c_plan_id = ?
+					)
+			);`
 
-	rows, err := db.DB.Query(sqlGetConfig, req.Token)
+	var planID int64
+	row := db.DB.QueryRow(sqlGetPlanId, req.Token)
+	err := row.Scan(&planID)
+	if err == sql.ErrNoRows {
+		// invalid token or deleted plan
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	} else if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	rows, err := db.DB.Query(sqlGetConfig, planID, planID)
 	defer rows.Close()
 	if err != nil {
 		logrus.Error(err)
