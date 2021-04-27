@@ -226,6 +226,28 @@ func configShareOwnershipOrAbort(c *gin.Context, configShareID int64, userID int
 
 /////// Plan Share Part ///////
 
+func planShareExist(configShareID int64) error {
+	var count int64
+	row := db.DB.QueryRow("select count(*) from t_plan_share where c_deleted = false and c_id = ?;", configShareID)
+	if err := row.Scan(&count); err != nil {
+		return err
+	} else {
+		if count > 0 {
+			return nil
+		} else {
+			return errors.New("plan share not exist or has been deleted")
+		}
+	}
+}
+
+func planShareExistOrAbort(c *gin.Context, configShareID int64) error {
+	err := planShareExist(configShareID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad(err.Error()))
+	}
+	return err
+}
+
 func planShareOwnership(configShareID int64, userID int64) error {
 	var dbUserID int64
 	const sqlCommand string = "select c_owner_id from t_plan where c_deleted = false and c_id = " +
