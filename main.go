@@ -1,8 +1,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/leafee98/class-schedule-to-icalendar-restserver/config"
 	"github.com/leafee98/class-schedule-to-icalendar-restserver/db"
 	"github.com/leafee98/class-schedule-to-icalendar-restserver/middlewares"
@@ -13,19 +11,34 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		logrus.Fatal("you must specify the config file path")
-	}
-	err := config.LoadConfig(os.Args[1])
-	if err != nil {
-		logrus.Fatalf("failed to load configure from file. detail: %s", err.Error())
+	var err error
+
+	config.ParseParameter()
+	if config.ConfigFile != "" {
+		if err = config.LoadConfigFromFile(config.ConfigFile); err != nil {
+			logrus.Fatal(err)
+		}
 	}
 
-	err = db.Init()
-	if err != nil {
-		logrus.Fatalf("failed to connect to database. detail: %s", err.Error())
+	config.LogCurrentConfig()
+
+	if err = config.ValidParamCombination(); err != nil {
+		logrus.Fatal(err)
+	}
+
+	// just initialize database or start server
+	if config.InitDatabase {
+		if err = db.InitDatabase(); err != nil {
+			logrus.Fatal(err)
+		}
+		logrus.Info("database initialized")
+		return
 	} else {
-		logrus.Info("database connected")
+		if err = db.Init(); err != nil {
+			logrus.Fatalf("failed to connect to database. detail: %s", err.Error())
+		} else {
+			logrus.Info("database connected")
+		}
 	}
 
 	err = rpc.Init()
