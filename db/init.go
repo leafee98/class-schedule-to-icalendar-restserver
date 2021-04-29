@@ -24,5 +24,5 @@ func Init() error {
 }
 
 func dsn(username, password, host, name string) string {
-	return fmt.Sprintf("%s:%s@tcp(%s)/%s", username, password, host, name)
+	return fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", username, password, host, name)
 }
