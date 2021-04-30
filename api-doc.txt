@@ -1,0 +1,434 @@
+==================================================
+=================== user part ====================
+==================================================
+
+--------------------------------------------------
+/register
+
+post:
+    username: string
+    password: string
+    nickname: string
+    email: string
+response data:
+    id: int // id of this user
+
+--------------------------------------------------
+/login
+
+post:
+    username: string
+    password: string
+    tokenDuration: int  // token's valid period (in days)
+response data:
+    id: int // id of this user
+
+--------------------------------------------------
+/logout
+
+post:
+    // no parameter
+get:
+    // no parameter
+response data:
+    // no parameter
+
+==================================================
+================= config part ====================
+==================================================
+
+--------------------------------------------------
+/config-create
+
+post:
+    name: string
+    type: int // 1: global, 2: lesson
+    format: int // 1: json, 2:toml (not supported)
+    content: string
+    remark: string
+response:
+    id: int
+
+--------------------------------------------------
+/config-get-by-id
+
+post:
+    id: int
+response data:
+    id: int
+    type: int
+    format: int
+    name: string
+    content: string
+    remark: string
+    createTime: string time // YYYY-MM-DDThh:mm:ssZ
+    modifyTime: string time // YYYY-MM-DDThh:mm:ssZ
+
+--------------------------------------------------
+/config-get-by-share
+
+post:
+    id: int
+response data:
+    id: int
+    type: int
+    format: int
+    name: string
+    content: string
+    remark: string
+    createTime: string time // YYYY-MM-DDThh:mm:ssZ
+    modifyTime: string time // YYYY-MM-DDThh:mm:ssZ
+
+--------------------------------------------------
+/config-modify
+
+post:
+    id: int
+    name: string
+    content: string
+    format: int
+    remark: string
+response data:
+    // no response data
+
+--------------------------------------------------
+/config-remove
+
+post:
+    id: int
+response data:
+    // no response data
+
+--------------------------------------------------
+/config-get-list
+
+post:
+    sortBy: string // 'id', 'name', 'createTime', 'modifyTime'
+    offset: int
+    count: int // mo more than 30
+response:
+    configs: ConfigSummary[]
+
+ConfigSummary:
+    id: int
+    type: int
+    name: string
+    format: int
+    remark: string
+    createTime: string time
+    modifyTime: string time
+
+--------------------------------------------------
+/config-share-create
+
+post:
+    id: int
+    remark: string
+response:
+    id: int // created share's id
+
+--------------------------------------------------
+/config-share-modify
+
+post:
+    id: int // share id
+    remark: string
+response data:
+    // no response data
+
+--------------------------------------------------
+/config-share-revoke
+
+post:
+    id: int // share id
+response data:
+    // no response data
+
+--------------------------------------------------
+/config-share-get-list
+
+post:
+    id: int // config id
+response data:
+    shares: ConfigShareDetail[]
+
+ConfigShareDetail:
+    id: int // share id
+    remark: string
+    createTime: string time
+
+
+==================================================
+================== plan part =====================
+==================================================
+
+--------------------------------------------------
+/plan-create
+
+post:
+    name string
+    remark string
+response data:
+    id: int
+
+--------------------------------------------------
+/plan-add-config
+
+post:
+    planId: int
+    configId: int
+response:
+    // no response data
+
+--------------------------------------------------
+/plan-remove-config
+
+post:
+    planId: int
+    configId: int
+response:
+    // no response data
+
+--------------------------------------------------
+/plan-add-share
+
+post:
+    planId: int
+    configShareId: int
+response:
+    // no response data
+
+--------------------------------------------------
+/plan-remove-share
+
+post:
+    planId: int
+    configShareId: int
+response:
+    // no response data
+
+--------------------------------------------------
+/plan-get-by-id
+
+post:
+    id: int
+response:
+    name: string
+    remark: string
+    id: int
+    createTime: string time
+    modifyTime: string time
+    configs: ConfigDetail
+    shares: ConfigDetail // share id replace config id
+
+ConfigDetail:
+    id: int
+    type: int
+    format: int
+    name: string
+    content: string
+    remark: string
+    createTime: string time
+    modifyTime: string time
+
+--------------------------------------------------
+/plan-get-by-share
+
+post:
+    id: int // share id
+response:
+    ...
+    // the same as `/plan-get-by-share`
+
+--------------------------------------------------
+/plan-remove
+
+post:
+    id: int
+response:
+    // no response data
+
+--------------------------------------------------
+/plan-modify
+
+post:
+    id: int
+    name: string
+    remark: string
+response:
+    // no response data
+
+--------------------------------------------------
+/plan-get-list
+
+post:
+    sortby: string // 'id', 'name', 'createTime', 'modifyTime'
+    offset: int
+    count: int // no more than 30
+response:
+    plans: PlanSummary[]
+
+PlanSummary:
+    id: int
+    name: string
+    remark  string
+    createTime: string time
+    modifyTime: string time
+
+--------------------------------------------------
+/plan-create-token
+
+post:
+    id: int // id of plan
+response:
+    token: string
+
+--------------------------------------------------
+/plan-revoke-token
+
+post:
+    token: string // token created
+response:
+    // no response data
+
+--------------------------------------------------
+/plan-get-token-list
+
+post:
+    id: int // id of plan
+response:
+    tokens: PlanTokenDetail[]
+
+PlanTokenDetail:
+    token: string
+    createTime: string time
+
+--------------------------------------------------
+/plan-share-create
+
+post:
+    id: int // id of plan
+    remark: string
+response:
+    id: int // id of share
+
+--------------------------------------------------
+/plan-share-modify
+
+post:
+    id: int // id of share
+    remark: string
+response:
+    // no response data
+
+--------------------------------------------------
+/plan-share-revoke
+
+post:
+    id: int // share id
+response:
+    // no response data
+
+--------------------------------------------------
+/plan-share-get-list
+
+post:
+    id: int // id of plan
+response:
+    shares: PlanShareDetail[]
+
+PlanShareDetail:
+    id: int // share id
+    remark: string
+    createTime: string time
+
+
+==================================================
+================= favor part =====================
+==================================================
+
+--------------------------------------------------
+/favor-config-add
+
+post:
+    id: int // id of config share
+response:
+    // no response data
+
+
+--------------------------------------------------
+/favor-config-remove
+
+post:
+    id: int // id of config share
+response:
+    // no response data
+
+
+--------------------------------------------------
+/favor-config-get-list
+
+post:
+    offset: int
+    count: int
+response:
+    configs: FavorConfigSummary[]
+
+FavorConfigSummary:
+    shareId: int
+    type: int
+    format: int
+    name: string
+    remark: string
+    favorTime: string time
+    createTime: string time
+    modifyTime: string time
+
+
+--------------------------------------------------
+/favor-plan-add
+
+post:
+    id: int // id of plan share
+response:
+    // no response data
+
+
+--------------------------------------------------
+/favor-plan-remove
+
+post:
+    id: int // id of plan share
+response:
+    // no response data
+
+
+--------------------------------------------------
+/favor-plan-get-list
+
+post:
+    offset: int
+    count: int
+response:
+    plans: FavorPlanSummary[]
+
+FavorPlanSummary:
+    shareId: int
+    name: string
+    remark: string
+    favorTime: string time
+    createTime: string time
+    modifyTime: string time
+
+
+==================================================
+================= generate part ==================
+==================================================
+
+--------------------------------------------------
+/generate-by-plan-token
+
+get:
+    token: string
+response:
+    // plain text, generate result
