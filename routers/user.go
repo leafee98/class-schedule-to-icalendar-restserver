@@ -100,7 +100,7 @@ func login(c *gin.Context) {
 
 func logout(c *gin.Context) {
 	token, err := c.Cookie("token")
-	c.SetCookie("token", "000", -1, "/", "", true, false)
+	c.SetCookie("token", "000", -1, "/", "", false, false)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("unauthorized logout is forbidden"))
 	}
