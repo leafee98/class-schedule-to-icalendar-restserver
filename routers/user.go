@@ -91,7 +91,7 @@ func login(c *gin.Context) {
 	if passCipher == dbPassword {
 		// logdin success, register token and set cookie
 		token := middlewares.RegisterToken(dbID, req.TokenDuration)
-		c.SetCookie("token", token, 3600*24*req.TokenDuration, "/", "", true, false)
+		c.SetCookie("token", token, 3600*24*req.TokenDuration, "/", "", false, false)
 		c.JSON(http.StatusOK, dto.NewResponseFine(dto.UserLoginRes{ID: dbID}))
 	} else {
 		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("password incorrect"))
