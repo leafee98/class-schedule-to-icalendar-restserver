@@ -53,7 +53,7 @@ func planCreate(c *gin.Context) {
 	res, err := db.DB.Exec("insert into t_plan (c_name, c_owner_id, c_remark) values (?, ?, ?);",
 		req.Name, userID, req.Remark)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadGateway, err.Error())
+		c.AbortWithStatusJSON(http.StatusBadGateway, dto.NewResponseBad(err.Error()))
 		return
 	}
 
