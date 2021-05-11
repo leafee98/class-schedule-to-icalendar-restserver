@@ -91,6 +91,7 @@ func login(c *gin.Context) {
 	if passCipher == dbPassword {
 		// logdin success, register token and set cookie
 		token := middlewares.RegisterToken(dbID, req.TokenDuration)
+		c.SetSameSite(http.SameSiteStrictMode)
 		c.SetCookie("token", token, 3600*24*req.TokenDuration, "/", "", false, false)
 		c.JSON(http.StatusOK, dto.NewResponseFine(dto.UserLoginRes{ID: dbID}))
 	} else {
@@ -100,6 +101,7 @@ func login(c *gin.Context) {
 
 func logout(c *gin.Context) {
 	token, err := c.Cookie("token")
+	c.SetSameSite(http.SameSiteStrictMode)
 	c.SetCookie("token", "000", -1, "/", "", false, false)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, dto.NewResponseBad("unauthorized logout is forbidden"))
