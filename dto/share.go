@@ -32,7 +32,7 @@ type ConfigShareDetail struct {
 }
 
 type PlanTokenDetail struct {
-	Token      string    `json:"tokens" binding:"required"`
+	Token      string    `json:"token" binding:"required"`
 	CreateTime time.Time `json:"createTime" binding:"required"`
 }
 
