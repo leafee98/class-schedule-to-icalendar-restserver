@@ -62,7 +62,7 @@ func RegisterToken(userID int64, duration int) string {
 
 	// insert new token into database
 	_, err = db.DB.Exec("insert into t_login_token (c_user_id, c_token, c_expire_time) values"+
-		" (?, ?, now() + interval ? hour)",
+		" (?, ?, now() + interval ? day)",
 		userID, token, duration)
 	if err != nil {
 		logrus.Error(err.Error())
