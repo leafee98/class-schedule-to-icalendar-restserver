@@ -4,8 +4,8 @@ type GenerateByPlanTokenReq struct {
 	Token string `form:"token" binding:"required"`
 }
 
-type GenerateByPlanShareTokenReq struct {
-	Token int64 `json:"token" form:"token" binding:"required"`
+type GenerateByPlanShareReq struct {
+	ShareID int64 `form:"shareId" binding:"required"`
 }
 
 type GenerateRes struct {

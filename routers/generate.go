@@ -15,6 +15,7 @@ import (
 
 func init() {
 	RegisterRouter("/generate-by-plan-token", "get", generateByPlanToken)
+	RegisterRouter("/generate-by-plan-share", "get", generateByPlanShare)
 }
 
 // require the token in get request
@@ -30,6 +31,52 @@ func generateByPlanToken(c *gin.Context) {
 	const sqlGetPlanId string = `
 		select c_id from t_plan where c_deleted = false and c_id = (
 			select c_plan_id from t_plan_token where c_token = ?);`
+
+	var planID int64
+	row := db.DB.QueryRow(sqlGetPlanId, req.Token)
+	err := row.Scan(&planID)
+	if err == sql.ErrNoRows {
+		// invalid token or deleted plan
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	} else if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	generateFromPlanId(c, planID)
+}
+
+func generateByPlanShare(c *gin.Context) {
+	const sqlGetPlanId string = `select c_plan_id from t_plan_share where c_deleted = false and c_id = ?;`
+
+	var req dto.GenerateByPlanShareReq
+	if bindOrAbort(c, &req) != nil {
+		return
+	}
+
+	var planID int64
+	row := db.DB.QueryRow(sqlGetPlanId, req.ShareID)
+	err := row.Scan(&planID)
+	if err == sql.ErrNoRows {
+		// invalid token or deleted plan
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	} else if err != nil {
+		logrus.Error(err)
+		c.AbortWithStatusJSON(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	generateFromPlanId(c, planID)
+}
+
+//////////////////////////////////////////
+//////// Generation Utility //////////////
+//////////////////////////////////////////
+
+func generateFromPlanId(c *gin.Context, planID int64) {
 	const sqlGetConfig string = `
 		select c_content, c_type, c_format
 		from t_config
@@ -53,19 +100,6 @@ func generateByPlanToken(c *gin.Context) {
 						where c_plan_id = ?
 					)
 			);`
-
-	var planID int64
-	row := db.DB.QueryRow(sqlGetPlanId, req.Token)
-	err := row.Scan(&planID)
-	if err == sql.ErrNoRows {
-		// invalid token or deleted plan
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	} else if err != nil {
-		logrus.Error(err)
-		c.AbortWithStatusJSON(http.StatusBadRequest, err.Error())
-		return
-	}
 
 	rows, err := db.DB.Query(sqlGetConfig, planID, planID)
 	defer rows.Close()
