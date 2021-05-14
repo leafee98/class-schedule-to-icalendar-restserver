@@ -603,7 +603,7 @@ func planShareGetList(c *gin.Context) {
 	}
 
 	// check existence and ownership
-	if configOwnershipOrAbort(c, req.ID, userID) != nil {
+	if planOwnershipOrAbort(c, req.ID, userID) != nil {
 		return
 	}
 
