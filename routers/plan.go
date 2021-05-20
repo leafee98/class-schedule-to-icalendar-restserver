@@ -650,7 +650,8 @@ func planGetRes(plan *dto.PlanGetRes, planID int64) error {
 
 	const sqlCommandGetConfigs = "select " +
 		"c_id, c_type, c_name, c_content, c_format, c_remark, c_create_time, c_modify_time " +
-		"from t_config where c_id in (select c_config_id from t_plan_config_relation where c_plan_id = ?);"
+		"from t_config where c_id in (select c_config_id from t_plan_config_relation" +
+		"where c_deleted = false and c_plan_id = ?);"
 	rows, err := db.DB.Query(sqlCommandGetConfigs, planID)
 	defer rows.Close()
 	if err != nil {
